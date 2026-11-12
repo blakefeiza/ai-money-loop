@@ -17,9 +17,24 @@ function each(l,f){Array.prototype.forEach.call(l,f)}
 function sc(id){return AI.SCENARIOS.filter(function(x){return x.id===id})[0]}
 function chipOf(id){var c=LAY[id].chip;return c?{rx:c[0],ry:c[1]}:{rx:31,ry:31}}
 function netPos(){var P={};Object.keys(N).forEach(function(id){P[id]={x:N[id].x,y:N[id].y}});return P}
+var BOARD_VB={x:0,y:10,w:600,h:722},BOARD=null;
+function board(){
+  if(BOARD)return BOARD;
+  var rows=[[["money",560]],[["labs",560]],[["cloud",560]],[["builders",560]],[["chips",300],["power",250]]],P={},H={};
+  rows.forEach(function(row,ri){
+    var cy=96+ri*138,x=20;
+    row.forEach(function(g){
+      var k=g[0],w=g[1],ids=GR[k].ids,n=ids.length;
+      H[k]={x:x,y:cy-66,w:w,h:130};
+      ids.forEach(function(id,i){P[id]={x:x+(i+.5)*w/n,y:cy-6}});
+      x+=w+10;
+    });
+  });
+  BOARD={P:P,H:H};return BOARD;
+}
 function clusterPos(){
   var P={};
-  if(M){Object.keys(GR).forEach(function(k,ri){var ids=GR[k].ids,n=ids.length;ids.forEach(function(id,i){P[id]={x:40+(i+.5)*520/n,y:62+ri*122}})});return P}
+  if(M){var b=board().P;Object.keys(b).forEach(function(id){P[id]={x:b[id].x,y:b[id].y}});return P}
   Object.keys(N).forEach(function(id){P[id]={x:LAY[id].cx,y:LAY[id].cy}});return P}
 
 /* ---------- shared: draw a company chip (logo on a cream disc) ---------- */
@@ -168,13 +183,15 @@ var svg=$("map"),net=makeNet(svg,{id:"m"}),gc=net.nodes;
 (function(){
   var CP=clusterPos();
   Object.keys(GR).forEach(function(k){
-    var ids=GR[k].ids,xs=[],ys=[];
-    ids.forEach(function(id){var c=chipOf(id);xs.push(CP[id].x-c.rx,CP[id].x+c.rx);ys.push(CP[id].y-c.ry-12,CP[id].y+c.ry+44)});
-    var x0=Math.min.apply(null,xs)-22,x1=Math.max.apply(null,xs)+22,y0=Math.min.apply(null,ys)-26,y1=Math.max.apply(null,ys)+6;
-    if(M){x0=20;x1=580}
+    var ids=GR[k].ids,xs=[],ys=[],x0,x1,y0,y1;
+    if(M){var H=board().H[k];x0=H.x;x1=H.x+H.w;y0=H.y;y1=H.y+H.h}
+    else{
+      ids.forEach(function(id){var c=chipOf(id);xs.push(CP[id].x-c.rx,CP[id].x+c.rx);ys.push(CP[id].y-c.ry-12,CP[id].y+c.ry+44)});
+      x0=Math.min.apply(null,xs)-22;x1=Math.max.apply(null,xs)+22;y0=Math.min.apply(null,ys)-26;y1=Math.max.apply(null,ys)+6;
+    }
     var g=el("g",{"class":"hull"},net.gHull);
     el("rect",{x:x0,y:y0,width:x1-x0,height:y1-y0,rx:22},g);
-    el("text",{x:x0+16,y:y0+20},g).textContent=GR[k].name;
+    el("text",{x:x0+16,y:y0+22},g).textContent=GR[k].name;
   });
 })();
 var posNow=netPos(),posAnim=0,layoutNow="net";
@@ -256,7 +273,7 @@ var vb={x:0,y:0,w:1000,h:1000/ASPECT},vbKey="",vbRaf=0;
 function fitView(v,mode,focus,fixed){
   var ids=focus?Object.keys(focus):Object.keys(v.nodes),t,isFull=false;
   if(fixed){t=fixed}
-  else if(mode==="cluster"&&M){t={x:0,y:8,w:600,h:750}}
+  else if(mode==="cluster"&&M){t=BOARD_VB}
   else if((mode==="cluster"&&!focus)||(!focus&&ids.length>=(M?12:7))||!ids.length){var h0=1000/ASPECT;t=M?{x:50,y:360-(900/ASPECT)/2,w:900,h:900/ASPECT}:{x:0,y:360-h0/2,w:1000,h:h0};isFull=true}
   else{
     var xs=[],ys=[];ids.forEach(function(id){xs.push(N[id].x);ys.push(N[id].y)});
@@ -287,8 +304,8 @@ function drawMap(st){
       if(sel0){
         egoId=sel0.t==="n"?sel0.id:byId[sel0.id].from;
         var ev=egoView(egoId);P=ev.P;v.nodes=ev.nodes;v.edges=ev.edges;key="ego:"+egoId;fixed={x:0,y:0,w:600,h:640};below=true;
-      }else{P=clusterPos();key="cluster";fixed={x:0,y:8,w:600,h:750};v.edges={};below=true;cluster=true}
-    }else if(cluster){P=clusterPos();key="cluster";fixed={x:0,y:8,w:600,h:750};below=true}
+      }else{P=clusterPos();key="cluster";fixed=BOARD_VB;v.edges={};below=true;cluster=true}
+    }else if(cluster){P=clusterPos();key="cluster";fixed=BOARD_VB;below=true}
     else if(st.mpos){
       P=netPos();Object.keys(st.mpos).forEach(function(id){P[id]={x:st.mpos[id][0],y:st.mpos[id][1]}});
       key="m:"+S.i;fixed={x:0,y:0,w:600,h:640};

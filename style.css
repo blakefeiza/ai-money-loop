@@ -223,3 +223,10 @@ body.m #map .edge .pill text{font-size:19px}
 }
 
 body.m #map.board .node text.vl{display:none}
+
+/* phone: compact legend so the picture gets the room */
+body.m .legend{flex-wrap:nowrap;overflow-x:auto;gap:4px;padding-bottom:2px;scrollbar-width:none}
+body.m .legend::-webkit-scrollbar{display:none}
+body.m .chip{font-size:11px;padding:2px 8px;white-space:nowrap;flex:none}
+body.m .chip i{width:12px}
+body.m .actlabel{margin-bottom:0}
