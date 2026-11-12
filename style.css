@@ -170,3 +170,44 @@ details.more[open] summary::before{transform:rotate(90deg)}
 details.more summary:hover{color:var(--gold)}
 details.more p{margin:8px 0 4px 20px;font:15px/1.55 var(--sans);color:#d6dcd5}
 .detail:empty{display:none}
+
+/* ---------- company picker (shown on phones) ---------- */
+.pk,.picker{display:none}
+.picker{flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.pk-b{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);border-radius:999px;padding:4px 10px 4px 5px;font:600 13px var(--sans);cursor:pointer}
+.pk-b img{width:20px;height:20px;object-fit:contain;background:var(--paper);border-radius:50%;padding:2px}
+.pk-b:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- phone pass ---------- */
+body.m .pk,body.m .picker{display:flex}
+body.m .pk{display:block}
+body.m .stage{height:60vh;padding:6px 0 4px}
+body.m .scenes{aspect-ratio:auto;height:calc(60vh - 78px);max-height:none}
+body.m .actlabel{font-size:11px;margin-bottom:2px}
+body.m .legend{min-height:0;gap:5px}
+body.m .chip{font-size:12px;padding:3px 9px}
+body.m .hint{font-size:12px;margin-top:2px;min-height:16px}
+body.m .step{min-height:78vh;padding-top:4vh;align-items:flex-start}
+body.m .card h2{font-size:26px}
+body.m .card .sub{font-size:17px}
+body.m .chap b{font-size:48px}
+body.m .fact{grid-template-columns:84px 1fr}
+body.m .fact b{font-size:30px}
+body.m details.more summary{font-size:15px;padding:4px 0}
+body.m .sc b{font-size:17px}
+body.m .detail .dcard{margin-bottom:60vh}
+/* chart type sizes: scene viewBoxes are ~600 wide, so these read as ~11-15px */
+body.m .t-name{font-size:25px}
+body.m .t-sub{font-size:20px}
+body.m .t-key{font-size:19px}
+body.m .t-pct{font-size:36px}
+body.m .t-pct.hot{font-size:50px}
+body.m .t-big{font-size:58px}
+/* full-map views are zoomed out on phones: bigger names, no arrow labels */
+body.m #map.full .node text.nm{font-size:27px;stroke-width:6px}
+body.m #map.full .node text.vl{display:none}
+body.m #map.full .edge .pill{display:none}
+body.m #map .node text.nm{font-size:19px}
+body.m #map .node text.vl{font-size:13px}
+body.m #map .edge .pill text{font-size:13px}
+@media (max-width:900px){#hnet .node text.nm{font-size:22px}#hnet .node text.vl{display:none}}

@@ -5,6 +5,9 @@ var T=AI.TYPES,N=AI.NODES,E=AI.EDGES,ST=AI.STEPS,LAY=AI.LAYOUT,GR=AI.GROUPS;
 var byId={};E.forEach(function(e){byId[e.id]=e});
 var S={i:0,sel:null,off:{},sc:null,p:0.6};
 var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+var M=window.innerWidth<=900,ASPECT=M?0.74:1000/720;
+document.body.classList.toggle("m",M);
+window.addEventListener("resize",function(){if((window.innerWidth<=900)!==M)location.reload()});
 
 function el(n,a,p){var x=document.createElementNS(NS,n);for(var k in a||{})x.setAttribute(k,a[k]);if(p)p.appendChild(x);return x}
 function $(id){return document.getElementById(id)}
@@ -14,7 +17,10 @@ function each(l,f){Array.prototype.forEach.call(l,f)}
 function sc(id){return AI.SCENARIOS.filter(function(x){return x.id===id})[0]}
 function chipOf(id){var c=LAY[id].chip;return c?{rx:c[0],ry:c[1]}:{rx:31,ry:31}}
 function netPos(){var P={};Object.keys(N).forEach(function(id){P[id]={x:N[id].x,y:N[id].y}});return P}
-function clusterPos(){var P={};Object.keys(N).forEach(function(id){P[id]={x:LAY[id].cx,y:LAY[id].cy}});return P}
+function clusterPos(){
+  var P={};
+  if(M){Object.keys(GR).forEach(function(k,ri){var ids=GR[k].ids,n=ids.length;ids.forEach(function(id,i){P[id]={x:40+(i+.5)*520/n,y:90+ri*150}})});return P}
+  Object.keys(N).forEach(function(id){P[id]={x:LAY[id].cx,y:LAY[id].cy}});return P}
 
 /* ---------- shared: draw a company chip (logo on a cream disc) ---------- */
 function drawChip(g,id,labelBelow){
@@ -165,6 +171,7 @@ var svg=$("map"),net=makeNet(svg,{id:"m"}),gc=net.nodes;
     var ids=GR[k].ids,xs=[],ys=[];
     ids.forEach(function(id){var c=chipOf(id);xs.push(CP[id].x-c.rx,CP[id].x+c.rx);ys.push(CP[id].y-c.ry-12,CP[id].y+c.ry+44)});
     var x0=Math.min.apply(null,xs)-22,x1=Math.max.apply(null,xs)+22,y0=Math.min.apply(null,ys)-26,y1=Math.max.apply(null,ys)+6;
+    if(M){x0=20;x1=580}
     var g=el("g",{"class":"hull"},net.gHull);
     el("rect",{x:x0,y:y0,width:x1-x0,height:y1-y0,rx:22},g);
     el("text",{x:x0+16,y:y0+20},g).textContent=GR[k].name;
@@ -217,20 +224,23 @@ function view(i){
   Object.keys(v.edges).forEach(function(id){var e=byId[id];if(!v.nodes[e.from]||!v.nodes[e.to])delete v.edges[id]});
   return v;
 }
-var vb={x:0,y:0,w:1000,h:720},vbKey="",vbRaf=0;
-function fitView(v,full){
-  var t,ids=Object.keys(v.nodes);
-  if(full||ids.length>=7||!ids.length){t={x:0,y:0,w:1000,h:720}}
+var vb={x:0,y:0,w:1000,h:1000/ASPECT},vbKey="",vbRaf=0;
+function fitView(v,mode,focus){
+  var ids=focus?Object.keys(focus):Object.keys(v.nodes),t,isFull=false;
+  if(mode==="cluster"&&M){t={x:0,y:10,w:600,h:920}}
+  else if((mode==="cluster"&&!focus)||(!focus&&ids.length>=(M?12:7))||!ids.length){var h0=1000/ASPECT;t=M?{x:50,y:360-(900/ASPECT)/2,w:900,h:900/ASPECT}:{x:0,y:360-h0/2,w:1000,h:h0};isFull=true}
   else{
     var xs=[],ys=[];ids.forEach(function(id){xs.push(N[id].x);ys.push(N[id].y)});
     var x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs),y0=Math.min.apply(null,ys),y1=Math.max.apply(null,ys);
-    var w=Math.max(x1-x0+380,480),h=Math.max(y1-y0+320,340);
-    if(w/h<1000/720)w=h*1000/720;else h=w*720/1000;
-    if(w>1000){w=1000;h=720}
-    var cx=(x0+x1)/2,cy=(y0+y1)/2;
-    t={x:Math.max(0,Math.min(1000-w,cx-w/2)),y:Math.max(0,Math.min(720-h,cy-h/2)),w:w,h:h};
+    var w=Math.max(x1-x0+(M?260:380),M?360:480),h=Math.max(y1-y0+(M?240:320),M?380:340);
+    if(w/h<ASPECT)w=h*ASPECT;else h=w/ASPECT;
+    if(w>=1000){w=1000;h=1000/ASPECT;isFull=true}
+    var cx=(x0+x1)/2,cy=(y0+y1)/2,tx=cx-w/2,ty=cy-h/2;
+    if(!M){tx=Math.max(0,Math.min(1000-w,tx));ty=Math.max(0,Math.min(720-h,ty))}
+    t={x:tx,y:ty,w:w,h:h};
   }
-  var key=[t.x,t.y,t.w].join();if(key===vbKey)return;vbKey=key;
+  svg.classList.toggle("full",isFull);
+  var key=[t.x,t.y,t.w,t.h].join();if(key===vbKey)return;vbKey=key;
   if(reduce){vb=t;svg.setAttribute("viewBox",[t.x,t.y,t.w,t.h].join(" "));return}
   var from={x:vb.x,y:vb.y,w:vb.w,h:vb.h},t0=null;cancelAnimationFrame(vbRaf);
   vbRaf=requestAnimationFrame(function f(ts){
@@ -243,7 +253,13 @@ function fitView(v,full){
 function drawMap(st){
   var v=view(S.i),explore=st.kind==="explore",cluster=st.layout==="cluster";
   setLayout(cluster?"cluster":"net");
-  fitView(v,cluster);
+  var sel0=S.sel,foc=null;
+  if(M&&sel0){
+    foc={};
+    if(sel0.t==="n"){foc[sel0.id]=1;E.forEach(function(e){if(v.edges[e.id]&&(e.from===sel0.id||e.to===sel0.id)){foc[e.from]=1;foc[e.to]=1}})}
+    else{foc[byId[sel0.id].from]=1;foc[byId[sel0.id].to]=1}
+  }
+  fitView(v,cluster?"cluster":null,foc);
   net.gHull.style.opacity=cluster?1:0;
   var sel=S.sel,selEdge=sel&&sel.t==="e"?sel.id:null,selNode=sel&&sel.t==="n"?sel.id:null;
   drawLegend(v,explore);
@@ -292,20 +308,29 @@ function drawLegend(v,explore){
 /* ================= RATIO ================= */
 var ratio={};
 (function(){
-  var r=$("ratio"),K=22,base=500;
-  el("text",{x:40,y:46,"class":"t-key"},r).textContent="Each square's area is drawn to scale.";
-  function pair(key,cx,name,a,b,putLabel,backLabel){
+  var r=$("ratio"),K=M?17:22;
+  r.setAttribute("viewBox",M?"0 0 600 820":"0 0 1000 720");
+  el("text",{x:M?30:40,y:46,"class":"t-key"},r).textContent="Each square's area is drawn to scale.";
+  function pair(key,cx,base,name,a,b,putLabel,backLabel){
     var g=el("g",{"class":"sq"},r),sa=K*Math.sqrt(a),sb=K*Math.sqrt(b),gap=22,x0=cx-(sa+gap+sb)/2;
     el("rect",{x:x0,y:base-sa,width:sa,height:sa,fill:T.inv.color},g);
     el("rect",{x:x0+sa+gap,y:base-sb,width:sb,height:sb,fill:T.svc.color},g);
     el("text",{x:x0+sa+gap+sb/2,y:base-sb-18,"class":"t-big"},g).textContent=(Math.round(b/a*10)/10)+"×";
     el("text",{x:cx,y:base+34,"class":"t-name"},g).textContent=name;
-    el("text",{x:x0+sa/2,y:base+60,"class":"t-sub"},g).textContent=putLabel;
-    el("text",{x:x0+sa+gap+sb/2,y:base+60,"class":"t-sub"},g).textContent=backLabel;
+    if(M){el("text",{x:cx,y:base+62,"class":"t-sub"},g).textContent=putLabel+" → "+backLabel}
+    else{
+      el("text",{x:x0+sa/2,y:base+60,"class":"t-sub"},g).textContent=putLabel;
+      el("text",{x:x0+sa+gap+sb/2,y:base+60,"class":"t-sub"},g).textContent=backLabel;
+    }
     ratio[key]=g;
   }
-  pair("a",250,"Microsoft → Anthropic",byId.ms_an.amt,byId.an_ms.amt,"$5B put in","$30B promised");
-  pair("b",740,"Amazon → OpenAI",byId.am_oa.amt,byId.oa_am.amt,"$50B put in","$138B promised");
+  if(M){
+    pair("a",300,320,"Microsoft → Anthropic",byId.ms_an.amt,byId.an_ms.amt,"$5B put in","$30B promised");
+    pair("b",300,740,"Amazon → OpenAI",byId.am_oa.amt,byId.oa_am.amt,"$50B put in","$138B promised");
+  }else{
+    pair("a",250,500,"Microsoft → Anthropic",byId.ms_an.amt,byId.an_ms.amt,"$5B put in","$30B promised");
+    pair("b",740,500,"Amazon → OpenAI",byId.am_oa.amt,byId.oa_am.amt,"$50B put in","$138B promised");
+  }
 })();
 function drawRatio(st){
   ratio.a.style.opacity=(st.pair===2)?0.25:1;
@@ -316,7 +341,8 @@ function drawRatio(st){
 
 /* ================= MATRIX (who is on both sides?) ================= */
 (function(){
-  var r=$("matrix"),X1=600,X2=830,Y0=190,ROW=62,K=1.5;
+  var r=$("matrix"),X1=M?360:600,X2=M?510:830,Y0=M?210:190,ROW=M?66:62,K=M?1.25:1.5,NAMEX=M?96:160,CHIPX=M?50:96,LEFT=M?30:40;
+  r.setAttribute("viewBox",M?"0 0 600 820":"0 0 1000 720");
   var rows=[
     {id:"nvidia",oa:byId.nv_oa.amt,an:byId.nv_an.amt},
     {id:"microsoft",oa:byId.oa_ms.amt,an:byId.ms_an.amt+byId.an_ms.amt},
@@ -333,76 +359,83 @@ function drawRatio(st){
     el("image",{href:"logos/"+L[0],x:-18,y:-18,width:36,height:36},g);
     el("text",{x:0,y:58,"class":"t-name"},g).textContent=h[2];
   });
-  el("rect",{x:30,y:Y0-ROW/2+4,width:940,height:ROW*3-8,rx:14,fill:"rgba(255,200,87,.10)",stroke:"rgba(255,200,87,.5)"},r);
-  el("text",{x:954,y:Y0-ROW/2+28,"class":"t-key",fill:"#ffc857",style:"text-anchor:end;letter-spacing:.14em"},r).textContent="BACK BOTH LABS";
+  el("rect",{x:LEFT-10,y:Y0-ROW/2+4,width:M?560:940,height:ROW*3-8,rx:14,fill:"rgba(255,200,87,.10)",stroke:"rgba(255,200,87,.5)"},r);
+  el("text",{x:M?LEFT:954,y:M?Y0-ROW/2-4:Y0-ROW/2+28,"class":"t-key",fill:"#ffc857",style:"text-anchor:"+(M?"start":"end")+";letter-spacing:.14em"},r).textContent="BACK BOTH LABS";
   rows.forEach(function(row,i){
     var y=Y0+i*ROW,L=LAY[row.id].logo,g=el("g",{transform:"translate(0,"+y+")"},r);
-    var chip=el("g",{transform:"translate(96,0)"},g),wide=!!LAY[row.id].chip;
+    var chip=el("g",{transform:"translate("+CHIPX+",0)"},g),wide=!!LAY[row.id].chip;
     el("ellipse",{rx:wide?42:20,ry:19,fill:"#f4efe4"},chip);
     if(L){var w=wide?70:26,h=L[2]*(w/L[1]);el("image",{href:"logos/"+L[0],x:-w/2,y:-h/2,width:w,height:h},chip)}
-    el("text",{x:160,y:6,"class":"t-name",style:"text-anchor:start"},g).textContent=N[row.id].name;
+    el("text",{x:NAMEX,y:6,"class":"t-name",style:"text-anchor:start"+(M?";font-size:22px":"")},g).textContent=N[row.id].name;
     function cell(cx,amt,nd,plus){
-      if(nd){el("circle",{cx:cx,cy:0,r:12,fill:"none",stroke:"#9fb3ab","stroke-dasharray":"3 3","stroke-width":1.5},g);el("text",{x:cx+22,y:5,"class":"t-sub",style:"text-anchor:start"},g).textContent="not public";return}
+      if(nd){el("circle",{cx:cx,cy:0,r:12,fill:"none",stroke:"#9fb3ab","stroke-dasharray":"3 3","stroke-width":1.5},g);el("text",{x:cx+22,y:5,"class":"t-sub",style:"text-anchor:start"},g).textContent=M?"n/p":"not public";return}
       if(amt==null){el("text",{x:cx,y:5,"class":"t-sub"},g).textContent="—";return}
       var rr=Math.max(4,K*Math.sqrt(amt));
       el("circle",{cx:cx,cy:0,r:rr,fill:"#ff6b6b","fill-opacity":.9},g);
-      el("text",{x:cx+rr+10,y:5,"class":"t-sub",style:"text-anchor:start;fill:#f4efe4"},g).textContent=money(amt)+(plus?"+":"");
+      el("text",{x:cx+rr+8,y:5,"class":"t-sub",style:"text-anchor:start;fill:#f4efe4"},g).textContent=money(amt)+(plus?"+":"");
     }
     cell(X1-20,row.oa,row.oaND);
     cell(X2-20,row.an,row.anND,row.anPlus);
   });
-  el("text",{x:40,y:Y0+8*ROW-8,"class":"t-key"},r).textContent="Circle area = disclosed dollars between the company and that lab: investments plus promised spending.";
-  el("text",{x:40,y:Y0+8*ROW+12,"class":"t-key"},r).textContent="Dashed = amount not public. Amazon's Anthropic figure leaves out its undisclosed cloud spending.";
+  var keys=M?["Circle area = disclosed dollars between the","company and that lab (investments plus","promised spending). Dashed, n/p = not public.","Amazon's Anthropic figure omits undisclosed cloud spend."]:["Circle area = disclosed dollars between the company and that lab: investments plus promised spending.","Dashed = amount not public. Amazon's Anthropic figure leaves out its undisclosed cloud spending."];
+  keys.forEach(function(k,i){el("text",{x:LEFT,y:Y0+8*ROW-4+i*(M?24:20),"class":"t-key"},r).textContent=k});
 })();
 
 /* ================= SCALE (promises vs what customers pay) ================= */
 (function(){
-  var r=$("scale"),K=13,base=540;
+  var r=$("scale"),K=M?9:13,base=M?520:540;
+  r.setAttribute("viewBox",M?"0 0 600 660":"0 0 1000 720");
   var P=byId.oa_ms.amt+byId.oa_or.amt+byId.oa_am.amt+byId.oa_cw.amt,R=byId.cu_oa.amt,LOSS=14;
   function side(v){return K*Math.sqrt(v)}
-  el("text",{x:40,y:46,"class":"t-key"},r).textContent="Squares are drawn to scale by area.";
-  var sp=side(P),x0=50;
+  el("text",{x:M?30:40,y:46,"class":"t-key"},r).textContent="Squares are drawn to scale by area.";
+  var sp=side(P),x0=M?30:50;
   el("rect",{x:x0,y:base-sp,width:sp,height:sp,fill:T.svc.color,"fill-opacity":.85},r);
-  el("text",{x:x0+sp/2,y:base-sp/2+16,"class":"t-big",style:"fill:#0b1d18;font-size:80px"},r).textContent="$"+Math.round(P)+"B";
-  el("text",{x:x0+sp/2,y:base+34,"class":"t-name"},r).textContent="Promised to four clouds";
-  el("text",{x:x0+sp/2,y:base+58,"class":"t-sub"},r).textContent="Paid over several years";
-  var sr=side(R),xr=x0+sp+80;
+  el("text",{x:x0+sp/2,y:base-sp/2+(M?12:16),"class":"t-big",style:"fill:#0b1d18;font-size:"+(M?58:80)+"px"},r).textContent="$"+Math.round(P)+"B";
+  el("text",{x:x0+sp/2,y:base+34,"class":"t-name"},r).textContent=M?"Promised":"Promised to four clouds";
+  el("text",{x:x0+sp/2,y:base+58,"class":"t-sub"},r).textContent=M?"to four clouds":"Paid over several years";
+  var sr=side(R),xr=x0+sp+(M?60:80);
   el("rect",{x:xr,y:base-sr,width:sr,height:sr,fill:"#f4efe4"},r);
-  el("text",{x:xr+sr/2,y:base-sr-14,"class":"t-pct hot",style:"font-size:36px"},r).textContent="$"+R+"B";
+  el("text",{x:xr+sr/2,y:base-sr-14,"class":"t-pct hot",style:"font-size:"+(M?30:36)+"px"},r).textContent="$"+R+"B";
   el("text",{x:xr+sr/2,y:base+34,"class":"t-name"},r).textContent="Customers pay";
-  el("text",{x:xr+sr/2,y:base+58,"class":"t-sub"},r).textContent="per year, run-rate";
-  var sl=side(LOSS),xl=xr+sr+130;
+  el("text",{x:xr+sr/2,y:base+58,"class":"t-sub"},r).textContent=M?"per year":"per year, run-rate";
+  var sl=side(LOSS),xl=M?500:xr+sr+130;
   el("rect",{x:xl,y:base-sl,width:sl,height:sl,fill:"none",stroke:"#ff6b6b","stroke-width":2,"stroke-dasharray":"5 4"},r);
-  el("text",{x:xl+sl/2,y:base-sl-14,"class":"t-pct",style:"font-size:30px;fill:#ff6b6b"},r).textContent="~$"+LOSS+"B";
-  el("text",{x:xl+sl/2,y:base+34,"class":"t-name"},r).textContent="Projected loss";
+  el("text",{x:xl+sl/2,y:base-sl-14,"class":"t-pct",style:"font-size:"+(M?26:30)+"px;fill:#ff6b6b"},r).textContent="~$"+LOSS+"B";
+  el("text",{x:xl+sl/2,y:base+34,"class":"t-name"},r).textContent=M?"Proj. loss":"Projected loss";
   el("text",{x:xl+sl/2,y:base+58,"class":"t-sub"},r).textContent="2026, reported";
-  el("text",{x:xr+sr/2+20,y:170,"class":"t-big",style:"text-anchor:start;font-size:72px"},r).textContent=Math.round(P/R)+"×";
-  el("text",{x:xr+sr/2+20,y:200,"class":"t-key",style:"text-anchor:start"},r).textContent="the promises equal about "+Math.round(P/R)+" years";
-  el("text",{x:xr+sr/2+20,y:222,"class":"t-key",style:"text-anchor:start"},r).textContent="of today's customer revenue.";
+  var tx=M?xr:xr+sr/2+20;
+  el("text",{x:tx,y:M?190:170,"class":"t-big",style:"text-anchor:start;font-size:"+(M?64:72)+"px"},r).textContent=Math.round(P/R)+"×";
+  var l1=M?"the promises equal about":"the promises equal about "+Math.round(P/R)+" years",l2=M?Math.round(P/R)+" years of today's":"of today's customer revenue.";
+  el("text",{x:tx,y:M?226:200,"class":"t-key",style:"text-anchor:start"},r).textContent=l1;
+  el("text",{x:tx,y:M?250:222,"class":"t-key",style:"text-anchor:start"},r).textContent=l2;
+  if(M)el("text",{x:tx,y:274,"class":"t-key",style:"text-anchor:start"},r).textContent="customer revenue.";
 })();
 
 /* ================= EXPOSURE ================= */
 var expo={items:[]};
 (function(){
-  var r=$("expo"),K=1.9,base=470,gap=40;
+  var r=$("expo"),K=M?1.5:1.9,base=470,gap=40;
+  r.setAttribute("viewBox",M?"0 0 600 870":"0 0 1000 720");
   var rows=[["oracle",byId.oa_or.amt,"promised"],["microsoft",byId.oa_ms.amt,"promised"],["amazon",byId.oa_am.amt,"promised"],["nvidia",byId.nv_oa.amt+byId.nv_oa_g.amt,"invested + guaranteed"]];
-  el("text",{x:40,y:70,"class":"t-key"},r).textContent="Gray circle: what the company is worth. Red circle: what OpenAI has promised it.";
-  el("text",{x:40,y:92,"class":"t-key"},r).textContent="Both drawn to scale by area.";
+  var keys=M?["Gray circle: what the company is worth.","Red circle: what OpenAI has promised it.","Both drawn to scale by area."]:["Gray circle: what the company is worth. Red circle: what OpenAI has promised it.","Both drawn to scale by area."];
+  keys.forEach(function(k,i){el("text",{x:M?30:40,y:(M?34:70)+i*(M?24:22),"class":"t-key"},r).textContent=k});
   var total=0;rows.forEach(function(x){total+=2*K*Math.sqrt(N[x[0]].value)+gap});total-=gap;
   var x=(1000-total)/2;
-  rows.forEach(function(row){
-    var id=row[0],val=N[id].value,R=K*Math.sqrt(val),cx=x+R;x+=2*R+gap;
+  rows.forEach(function(row,ri){
+    var id=row[0],val=N[id].value,R=K*Math.sqrt(val),cx,bs=base;
+    if(M){cx=ri%2===0?150:450;bs=ri<2?330:700}
+    else{cx=x+R;x+=2*R+gap}
     var g=el("g",{"class":"exp-g"},r);
-    el("circle",{cx:cx,cy:base-R,r:R,"class":"out"},g);
+    el("circle",{cx:cx,cy:bs-R,r:R,"class":"out"},g);
     var L=LAY[id].logo,lw=Math.min(R*0.9,58),lh=lw*L[2]/L[1];
-    el("image",{href:"logos/"+L[0],x:cx-lw/2,y:base-R-lh/2-R*0.35,width:lw,height:lh,opacity:.85},g);
-    var inn=el("circle",{cx:cx,cy:base,r:0,"class":"inn"},g);
-    el("text",{x:cx,y:base+32,"class":"t-name"},g).textContent=N[id].name;
-    el("text",{x:cx,y:base+54,"class":"t-sub"},g).textContent="worth "+money(val);
-    var line=el("text",{x:cx,y:base+78,"class":"t-sub"},g);
-    var pct=el("text",{x:cx,y:base+124,"class":"t-pct"},g);
-    el("text",{x:cx,y:base+146,"class":"t-sub"},g).textContent="of its value";
-    expo.items.push({id:id,amt:row[1],val:val,K:K,base:base,g:g,inn:inn,line:line,pct:pct,what:row[2]});
+    el("image",{href:"logos/"+L[0],x:cx-lw/2,y:bs-R-lh/2-R*0.35,width:lw,height:lh,opacity:.85},g);
+    var inn=el("circle",{cx:cx,cy:bs,r:0,"class":"inn"},g);
+    el("text",{x:cx,y:bs+32,"class":"t-name"},g).textContent=N[id].name;
+    el("text",{x:cx,y:bs+54,"class":"t-sub"},g).textContent="worth "+money(val);
+    var line=el("text",{x:cx,y:bs+78,"class":"t-sub"},g);
+    var pct=el("text",{x:cx,y:bs+124,"class":"t-pct"},g);
+    el("text",{x:cx,y:bs+146,"class":"t-sub"},g).textContent="of its value";
+    expo.items.push({id:id,amt:row[1],val:val,K:K,base:bs,g:g,inn:inn,line:line,pct:pct,what:row[2]});
   });
 })();
 function drawExpo(st){
@@ -436,10 +469,19 @@ function drawExpo(st){
       AI.SCENARIOS.forEach(function(s){h+='<button class="sc" style="--c:'+s.color+'" data-s="'+s.id+'"><b>'+s.name+'</b><span>'+s.summary+'</span></button>'});
       h+='<div id="scbody"></div>';
     }
+    if(st.kind==="explore"){
+      h+='<p class="lbl pk">Jump to a company</p><div class="picker">';
+      Object.keys(GR).forEach(function(k){GR[k].ids.forEach(function(id){
+        var L=LAY[id].logo;
+        h+='<button class="pk-b" data-id="'+id+'">'+(L?'<img src="logos/'+L[0]+'" alt="">':'')+'<span>'+N[id].name+'</span></button>';
+      })});
+      h+='</div>';
+    }
     if((st.scene||"map")==="map")h+='<div class="detail" data-d="'+i+'"></div>';
     h+='</div></section>';
   });
   $("steps").innerHTML=h;
+  each(document.querySelectorAll(".pk-b"),function(b){b.onclick=function(){S.sel={t:"n",id:b.dataset.id};render()}});
   var sl=$("sl");if(sl)sl.oninput=function(){S.p=sl.value/100;render()};
   each(document.querySelectorAll(".sc"),function(b){b.onclick=function(){S.sc=S.sc===b.dataset.s?null:b.dataset.s;S.sel=null;render()}});
 })();
