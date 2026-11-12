@@ -19,7 +19,7 @@ function chipOf(id){var c=LAY[id].chip;return c?{rx:c[0],ry:c[1]}:{rx:31,ry:31}}
 function netPos(){var P={};Object.keys(N).forEach(function(id){P[id]={x:N[id].x,y:N[id].y}});return P}
 function clusterPos(){
   var P={};
-  if(M){Object.keys(GR).forEach(function(k,ri){var ids=GR[k].ids,n=ids.length;ids.forEach(function(id,i){P[id]={x:40+(i+.5)*520/n,y:90+ri*150}})});return P}
+  if(M){Object.keys(GR).forEach(function(k,ri){var ids=GR[k].ids,n=ids.length;ids.forEach(function(id,i){P[id]={x:40+(i+.5)*520/n,y:62+ri*122}})});return P}
   Object.keys(N).forEach(function(id){P[id]={x:LAY[id].cx,y:LAY[id].cy}});return P}
 
 /* ---------- shared: draw a company chip (logo on a cream disc) ---------- */
@@ -42,7 +42,7 @@ function above(id){return id==="openai"||id==="softbank"||id==="google"}
 
 /* ---------- shared: network builder ---------- */
 function makeNet(svg,o){
-  var net={svg:svg,nodes:{},halo:{},edges:{},P:netPos()};
+  var net={svg:svg,nodes:{},halo:{},edges:{},P:netPos(),opts:{bs:(M&&!o.hero)?0.55:1,ego:null,mlt:null}};
   var defs=el("defs",{},svg);
   Object.keys(T).forEach(function(k){
     var m=el("marker",{id:o.id+"-ar-"+k,viewBox:"0 0 10 10",refX:"6",refY:"5",markerUnits:"userSpaceOnUse",markerWidth:o.hero?"11":"17",markerHeight:o.hero?"11":"17",orient:"auto-start-reverse"},defs);
@@ -65,11 +65,11 @@ function makeNet(svg,o){
     var hit=el("path",{"class":"hit"},eg);
     var rect=null,txt=null;
     if(!o.hero){
-      var pill=el("g",{"class":"pill"},eg),w=e.label.length*6.6+14;
-      rect=el("rect",{width:w,height:20,rx:10,stroke:c},pill);
+      var pill=el("g",{"class":"pill"},eg),w=M?e.label.length*9.2+20:e.label.length*6.6+14,ph=M?28:20;
+      rect=el("rect",{width:w,height:ph,rx:ph/2,stroke:c},pill);
       txt=el("text",{fill:c},pill);txt.textContent=e.label;
     }
-    net.edges[e.id]={g:eg,line:line,hit:hit,rect:rect,txt:txt,w:e.label.length*6.6+14};
+    net.edges[e.id]={g:eg,line:line,hit:hit,rect:rect,txt:txt,w:M&&!o.hero?e.label.length*9.2+20:e.label.length*6.6+14,hh:M&&!o.hero?14:10};
   });
   net.update=function(P){
     net.P=P;
@@ -78,26 +78,26 @@ function makeNet(svg,o){
       if(net.halo[id]){net.halo[id].setAttribute("cx",p.x);net.halo[id].setAttribute("cy",p.y)}
     });
     E.forEach(function(e){
-      var g=geom(e,P),h=net.edges[e.id];
+      var g=geom(e,P,net.opts),h=net.edges[e.id];
       h.line.setAttribute("d",g.d);h.hit.setAttribute("d",g.d);
-      if(h.rect){h.rect.setAttribute("x",g.lx-h.w/2);h.rect.setAttribute("y",g.ly-10);h.txt.setAttribute("x",g.lx);h.txt.setAttribute("y",g.ly)}
+      if(h.rect){h.rect.setAttribute("x",g.lx-h.w/2);h.rect.setAttribute("y",g.ly-h.hh);h.txt.setAttribute("x",g.lx);h.txt.setAttribute("y",g.ly)}
       h.d=g.d;
     });
   };
   net.update(net.P);
   return net;
 }
-function geom(e,P){
+function geom(e,P,opts){
   var a=P[e.from],b=P[e.to],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
   var mx=(a.x+b.x)/2,my=(a.y+b.y)/2,nx=dy/len,ny=-dx/len;
-  var cx=mx+nx*e.bend*2,cy=my+ny*e.bend*2;
+  var bd=e.bend*((opts&&opts.bs)||1),cx=mx+nx*bd*2,cy=my+ny*bd*2;
   function edgePt(p,c,id,extra){
     var vx=c.x-p.x,vy=c.y-p.y,l=Math.hypot(vx,vy)||1;vx/=l;vy/=l;
     var k=chipOf(id),r=k.rx*k.ry/Math.sqrt(Math.pow(k.ry*vx,2)+Math.pow(k.rx*vy,2));
     return{x:p.x+vx*(r+extra),y:p.y+vy*(r+extra)};
   }
   var s=edgePt(a,{x:cx,y:cy},e.from,3),t=edgePt(b,{x:cx,y:cy},e.to,10);
-  var u=e.lt||0.5,lx=(1-u)*(1-u)*s.x+2*u*(1-u)*cx+u*u*t.x,ly=(1-u)*(1-u)*s.y+2*u*(1-u)*cy+u*u*t.y;
+  var u=(opts&&opts.mlt&&opts.mlt[e.id]!=null)?opts.mlt[e.id]:(opts&&opts.ego)?(e.from===opts.ego?0.64:0.36):(e.lt||0.5),lx=(1-u)*(1-u)*s.x+2*u*(1-u)*cx+u*u*t.x,ly=(1-u)*(1-u)*s.y+2*u*(1-u)*cy+u*u*t.y;
   return{d:"M"+s.x+","+s.y+" Q"+cx+","+cy+" "+t.x+","+t.y,lx:lx,ly:ly};
 }
 
@@ -178,20 +178,48 @@ var svg=$("map"),net=makeNet(svg,{id:"m"}),gc=net.nodes;
   });
 })();
 var posNow=netPos(),posAnim=0,layoutNow="net";
-function setLayout(name){
-  if(name===layoutNow)return;
-  layoutNow=name;
-  Object.keys(gc).forEach(function(id){var g=gc[id];if(g.__dy)g.__labs.forEach(function(t){t.style.transform=name==="cluster"?"translateY("+g.__dy+"px)":""})});
-  var from={},to=name==="cluster"?clusterPos():netPos();
-  Object.keys(posNow).forEach(function(id){from[id]={x:posNow[id].x,y:posNow[id].y}});
+// put each name label on the side facing away from its arrows
+function applyLabelSides(P,v,mode,fixedSides){
+  Object.keys(gc).forEach(function(id){
+    var g=gc[id],c=chipOf(id),D=2*c.ry+42,initial=above(id)?"above":"below",side=initial;
+    if(mode==="below")side="below";
+    else if(mode==="auto"&&P[id]){
+      var sum=0,n=0;
+      Object.keys(v.edges).forEach(function(k){var e=byId[k];if(e.from===id&&P[e.to]){sum+=P[e.to].y;n++}else if(e.to===id&&P[e.from]){sum+=P[e.from].y;n++}});
+      side=(n&&sum/n>P[id].y+10)?"above":"below";
+    }
+    if(fixedSides&&fixedSides[id])side=fixedSides[id];
+    var dy=side===initial?0:(side==="below"?D:-D);
+    (g.__labs||[]).forEach(function(t){t.style.transform=dy?"translateY("+dy+"px)":""});
+  });
+}
+function setTargets(key,P,below){
+  if(key===layoutNow)return;
+  layoutNow=key;
+  var from={},to={};
+  Object.keys(posNow).forEach(function(id){from[id]={x:posNow[id].x,y:posNow[id].y};to[id]=P[id]||{x:posNow[id].x,y:posNow[id].y}});
   cancelAnimationFrame(posAnim);
   if(reduce){posNow=to;net.update(posNow);return}
   var t0=null;
   posAnim=requestAnimationFrame(function f(ts){
-    if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,P={};
-    Object.keys(to).forEach(function(id){P[id]={x:from[id].x+(to[id].x-from[id].x)*e,y:from[id].y+(to[id].y-from[id].y)*e}});
-    posNow=P;net.update(P);if(k<1)posAnim=requestAnimationFrame(f);
+    if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,Q={};
+    Object.keys(to).forEach(function(id){Q[id]={x:from[id].x+(to[id].x-from[id].x)*e,y:from[id].y+(to[id].y-from[id].y)*e}});
+    posNow=Q;net.update(Q);if(k<1)posAnim=requestAnimationFrame(f);
   });
+}
+// phone only: positions for one company and everyone it is connected to
+function egoView(id){
+  var nb={},order=Object.keys(GR);
+  E.forEach(function(e){if(e.from===id)nb[e.to]=1;else if(e.to===id)nb[e.from]=1});
+  var ids=Object.keys(nb);
+  function gi(x){for(var k=0;k<order.length;k++){if(GR[order[k]].ids.indexOf(x)>=0)return k}return 9}
+  ids.sort(function(p,q){return gi(p)-gi(q)});
+  var n=ids.length,P={},rx=205,ry=n>9?230:215;
+  P[id]={x:300,y:312};
+  ids.forEach(function(x,i){var ang=-Math.PI/2+i*2*Math.PI/n;P[x]={x:300+rx*Math.cos(ang),y:312+ry*Math.sin(ang)}});
+  var nodes={},edges={};nodes[id]=1;ids.forEach(function(x){nodes[x]=1});
+  E.forEach(function(e){if(e.from===id||e.to===id)edges[e.id]=1});
+  return{P:P,nodes:nodes,edges:edges};
 }
 svg.addEventListener("click",function(ev){if(ev.target===svg&&S.sel){S.sel=null;render()}});
 Object.keys(N).forEach(function(id){
@@ -225,9 +253,10 @@ function view(i){
   return v;
 }
 var vb={x:0,y:0,w:1000,h:1000/ASPECT},vbKey="",vbRaf=0;
-function fitView(v,mode,focus){
+function fitView(v,mode,focus,fixed){
   var ids=focus?Object.keys(focus):Object.keys(v.nodes),t,isFull=false;
-  if(mode==="cluster"&&M){t={x:0,y:10,w:600,h:920}}
+  if(fixed){t=fixed}
+  else if(mode==="cluster"&&M){t={x:0,y:8,w:600,h:750}}
   else if((mode==="cluster"&&!focus)||(!focus&&ids.length>=(M?12:7))||!ids.length){var h0=1000/ASPECT;t=M?{x:50,y:360-(900/ASPECT)/2,w:900,h:900/ASPECT}:{x:0,y:360-h0/2,w:1000,h:h0};isFull=true}
   else{
     var xs=[],ys=[];ids.forEach(function(id){xs.push(N[id].x);ys.push(N[id].y)});
@@ -252,14 +281,24 @@ function fitView(v,mode,focus){
 }
 function drawMap(st){
   var v=view(S.i),explore=st.kind==="explore",cluster=st.layout==="cluster";
-  setLayout(cluster?"cluster":"net");
-  var sel0=S.sel,foc=null;
-  if(M&&sel0){
-    foc={};
-    if(sel0.t==="n"){foc[sel0.id]=1;E.forEach(function(e){if(v.edges[e.id]&&(e.from===sel0.id||e.to===sel0.id)){foc[e.from]=1;foc[e.to]=1}})}
-    else{foc[byId[sel0.id].from]=1;foc[byId[sel0.id].to]=1}
-  }
-  fitView(v,cluster?"cluster":null,foc);
+  var sel0=S.sel,egoId=null,fixed=null,foc=null,key,P,below=false;
+  if(M){
+    if(explore){
+      if(sel0){
+        egoId=sel0.t==="n"?sel0.id:byId[sel0.id].from;
+        var ev=egoView(egoId);P=ev.P;v.nodes=ev.nodes;v.edges=ev.edges;key="ego:"+egoId;fixed={x:0,y:0,w:600,h:640};below=true;
+      }else{P=clusterPos();key="cluster";fixed={x:0,y:8,w:600,h:750};v.edges={};below=true;cluster=true}
+    }else if(cluster){P=clusterPos();key="cluster";fixed={x:0,y:8,w:600,h:750};below=true}
+    else if(st.mpos){
+      P=netPos();Object.keys(st.mpos).forEach(function(id){P[id]={x:st.mpos[id][0],y:st.mpos[id][1]}});
+      key="m:"+S.i;fixed={x:0,y:0,w:600,h:640};
+    }else{P=netPos();key="net"}
+  }else{P=cluster?clusterPos():netPos();key=cluster?"cluster":"net";below=cluster}
+  net.opts.ego=egoId;net.opts.mlt=(M&&st.mlt)?st.mlt:null;
+  svg.classList.toggle("board",!!(M&&cluster));
+  setTargets(key,P,below);
+  applyLabelSides(P,v,M?((cluster||egoId||explore)?"below":(st.mpos?"auto":"default")):(cluster?"below":"default"),M?st.mside:null);
+  fitView(v,cluster?"cluster":null,foc,fixed);
   net.gHull.style.opacity=cluster?1:0;
   var sel=S.sel,selEdge=sel&&sel.t==="e"?sel.id:null,selNode=sel&&sel.t==="n"?sel.id:null;
   drawLegend(v,explore);
@@ -282,7 +321,7 @@ function drawMap(st){
   Object.keys(N).forEach(function(id){
     var g=gc[id],on=!!v.nodes[id];
     g.classList.toggle("gone",!on);
-    if(net.halo[id])net.halo[id].style.opacity=(on&&!cluster)?1:0;
+    if(net.halo[id])net.halo[id].style.opacity=(on&&!cluster&&!egoId)?1:0;
     var faded=false;
     if(selNode||selEdge){
       faded=true;
@@ -471,7 +510,7 @@ function drawExpo(st){
       h+='<div id="scbody"></div>';
     }
     if(st.kind==="explore"){
-      h+='<p class="lbl pk">Jump to a company</p><div class="picker">';
+      h+='<p class="lbl pk">Jump to a company</p><div class="picker"><button class="pk-b" data-id="">Show all</button>';
       Object.keys(GR).forEach(function(k){GR[k].ids.forEach(function(id){
         var L=LAY[id].logo;
         h+='<button class="pk-b" data-id="'+id+'">'+(L?'<img src="logos/'+L[0]+'" alt="">':'')+'<span>'+N[id].name+'</span></button>';
@@ -482,7 +521,7 @@ function drawExpo(st){
     h+='</div></section>';
   });
   $("steps").innerHTML=h;
-  each(document.querySelectorAll(".pk-b"),function(b){b.onclick=function(){S.sel={t:"n",id:b.dataset.id};render()}});
+  each(document.querySelectorAll(".pk-b"),function(b){b.onclick=function(){S.sel=b.dataset.id?{t:"n",id:b.dataset.id}:null;render()}});
   var sl=$("sl");if(sl)sl.oninput=function(){S.p=sl.value/100;render()};
   each(document.querySelectorAll(".sc"),function(b){b.onclick=function(){S.sc=S.sc===b.dataset.s?null:b.dataset.s;S.sel=null;render()}});
 })();
@@ -497,7 +536,7 @@ function render(){
   if(scene==="map"){drawMap(st)}else{$("legend").innerHTML=""}
   if(scene==="ratio")drawRatio(st);
   if(scene==="expo")drawExpo(st);
-  $("hint").textContent=(scene==="map"&&!S.sel)?(st.hint||""):"";
+  $("hint").textContent=(scene==="map"&&!S.sel)?(st.hint||""):(M&&S.sel&&st.kind==="explore"?"Tap another company, or scroll down for details.":"");
   each(document.querySelectorAll(".sc"),function(b){b.classList.toggle("on",b.dataset.s===S.sc)});
   var sb=$("scbody");
   if(sb){

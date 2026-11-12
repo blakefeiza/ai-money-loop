@@ -210,9 +210,9 @@ body.m .t-big{font-size:58px}
 body.m #map.full .node text.nm{font-size:27px;stroke-width:6px}
 body.m #map.full .node text.vl{display:none}
 body.m #map.full .edge .pill{display:none}
-body.m #map .node text.nm{font-size:19px}
-body.m #map .node text.vl{font-size:13px}
-body.m #map .edge .pill text{font-size:13px}
+body.m #map .node text.nm{font-size:22px;stroke-width:6px}
+body.m #map .node text.vl{font-size:15px}
+body.m #map .edge .pill text{font-size:19px}
 @media (max-width:900px){#hnet .node text.nm{font-size:22px}#hnet .node text.vl{display:none}}
 
 @supports (height:100svh){
@@ -221,3 +221,5 @@ body.m #map .edge .pill text{font-size:13px}
   body.m .step:last-child{min-height:90svh}
   .hero{min-height:100svh}
 }
+
+body.m #map.board .node text.vl{display:none}
