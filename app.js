@@ -333,6 +333,7 @@ var ratio={};
   }
 })();
 function drawRatio(st){
+  if(M)$("ratio").setAttribute("viewBox",st.pair===1?"0 20 600 440":"0 0 600 820");
   ratio.a.style.opacity=(st.pair===2)?0.25:1;
   ratio.b.style.opacity=(st.pair===1)?0:1;
   each(ratio.a.querySelectorAll(".t-big"),function(t){t.style.opacity=(st.pair===1||st.pair===3)?1:0});
@@ -398,7 +399,7 @@ function drawRatio(st){
   el("text",{x:xr+sr/2,y:base-sr-14,"class":"t-pct hot",style:"font-size:"+(M?30:36)+"px"},r).textContent="$"+R+"B";
   el("text",{x:xr+sr/2,y:base+34,"class":"t-name"},r).textContent="Customers pay";
   el("text",{x:xr+sr/2,y:base+58,"class":"t-sub"},r).textContent=M?"per year":"per year, run-rate";
-  var sl=side(LOSS),xl=M?500:xr+sr+130;
+  var sl=side(LOSS),xl=M?515:xr+sr+130;
   el("rect",{x:xl,y:base-sl,width:sl,height:sl,fill:"none",stroke:"#ff6b6b","stroke-width":2,"stroke-dasharray":"5 4"},r);
   el("text",{x:xl+sl/2,y:base-sl-14,"class":"t-pct",style:"font-size:"+(M?26:30)+"px;fill:#ff6b6b"},r).textContent="~$"+LOSS+"B";
   el("text",{x:xl+sl/2,y:base+34,"class":"t-name"},r).textContent=M?"Proj. loss":"Projected loss";
@@ -530,17 +531,27 @@ function drawDetail(){
 }
 
 /* ================= SCROLL ================= */
-var narrow=window.innerWidth<=900;
-var io=new IntersectionObserver(function(es){
-  es.forEach(function(en){
-    if(en.isIntersecting){var i=+en.target.dataset.i;if(i!==S.i){S.i=i;S.sel=null;if(ST[i].kind!=="future")S.sc=null;render()}}
-  });
-},{rootMargin:narrow?"-62% 0px -20% 0px":"-45% 0px -45% 0px"});
-each(document.querySelectorAll(".step"),function(s){io.observe(s)});
+var stepEls=document.querySelectorAll(".step"),stageEl=document.querySelector(".stage"),ticking=false;
+// the "reading line": a step becomes current when its top crosses this line.
+// desktop: middle of the screen. phone: part-way down the text area under the sticky picture.
+function readingLine(){
+  if(M){var b=stageEl.getBoundingClientRect().bottom;return b+(window.innerHeight-b)*0.55}
+  return window.innerHeight*0.5;
+}
+function activate(){
+  ticking=false;
+  var L=readingLine(),idx=0;
+  for(var i=0;i<stepEls.length;i++){if(stepEls[i].getBoundingClientRect().top<=L)idx=i;else break}
+  if(idx!==S.i){S.i=idx;S.sel=null;if(ST[idx].kind!=="future")S.sc=null;render()}
+}
+function queue(){if(!ticking){ticking=true;requestAnimationFrame(activate)}}
+window.addEventListener("scroll",queue,{passive:true});
+window.addEventListener("resize",queue);
+window.addEventListener("orientationchange",queue);
 window.addEventListener("scroll",function(){
   var h=document.documentElement,p=h.scrollTop/(h.scrollHeight-h.clientHeight);
   $("bar").style.width=Math.min(100,p*100)+"%";
 },{passive:true});
 $("sources").innerHTML=AI.SOURCES.map(function(s){return '<li><a href="'+s[1]+'" target="_blank" rel="noopener">'+s[0]+'</a></li>'}).join("");
-render();
+render();activate();
 })();

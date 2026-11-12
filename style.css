@@ -181,13 +181,16 @@ details.more p{margin:8px 0 4px 20px;font:15px/1.55 var(--sans);color:#d6dcd5}
 /* ---------- phone pass ---------- */
 body.m .pk,body.m .picker{display:flex}
 body.m .pk{display:block}
-body.m .stage{height:60vh;padding:6px 0 4px}
-body.m .scenes{aspect-ratio:auto;height:calc(60vh - 78px);max-height:none}
+body.m .stage{height:60vh;padding:6px 0 4px;display:flex;flex-direction:column;justify-content:flex-start}
+body.m .scenes{aspect-ratio:auto;flex:1 1 auto;min-height:0;height:auto;max-height:none}
 body.m .actlabel{font-size:11px;margin-bottom:2px}
 body.m .legend{min-height:0;gap:5px}
 body.m .chip{font-size:12px;padding:3px 9px}
 body.m .hint{font-size:12px;margin-top:2px;min-height:16px}
-body.m .step{min-height:78vh;padding-top:4vh;align-items:flex-start}
+body.m .step{min-height:50vh;padding:0 0 3vh;align-items:flex-start}
+body.m .step .card{opacity:.55;transform:none}
+body.m .step.on .card{opacity:1}
+body.m .step:last-child{min-height:90vh}
 body.m .card h2{font-size:26px}
 body.m .card .sub{font-size:17px}
 body.m .chap b{font-size:48px}
@@ -195,7 +198,7 @@ body.m .fact{grid-template-columns:84px 1fr}
 body.m .fact b{font-size:30px}
 body.m details.more summary{font-size:15px;padding:4px 0}
 body.m .sc b{font-size:17px}
-body.m .detail .dcard{margin-bottom:60vh}
+body.m .detail .dcard{margin-bottom:20vh}
 /* chart type sizes: scene viewBoxes are ~600 wide, so these read as ~11-15px */
 body.m .t-name{font-size:25px}
 body.m .t-sub{font-size:20px}
@@ -211,3 +214,10 @@ body.m #map .node text.nm{font-size:19px}
 body.m #map .node text.vl{font-size:13px}
 body.m #map .edge .pill text{font-size:13px}
 @media (max-width:900px){#hnet .node text.nm{font-size:22px}#hnet .node text.vl{display:none}}
+
+@supports (height:100svh){
+  body.m .stage{height:60svh}
+  body.m .step{min-height:50svh}
+  body.m .step:last-child{min-height:90svh}
+  .hero{min-height:100svh}
+}
