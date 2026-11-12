@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The AI money loop</title>
+<meta name="description" content="Nvidia invests in OpenAI. OpenAI rents from Oracle. Oracle buys from Nvidia. A scroll-through guide to the loop at the center of the AI boom.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400;1,9..144,500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="progress"><i id="bar"></i></div>
+
+<header class="hero">
+  <div class="masthead"><span>Feiza Data</span><span>The Loop</span><span>November 2026</span></div>
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">An explainer · 3-minute read</p>
+      <h1>The same dollars <em>keep going round.</em></h1>
+      <p class="deck">Nvidia invests in OpenAI. OpenAI rents computers from Oracle. Oracle buys its chips from Nvidia. Eighteen companies are now tied together this way.</p>
+      <div class="pull">
+        <div class="big" aria-label="710 billion dollars"><span id="count">$0</span><span class="unit">B</span></div>
+        <p>promised by one company to four cloud providers. Several of them also invest in it.</p>
+      </div>
+      <a class="go" href="#story" id="start">Start the story <span aria-hidden="true">↓</span></a>
+      <p class="byline">By Blake Feiza</p>
+    </div>
+    <div class="hero-viz">
+      <svg id="hnet" viewBox="-20 -10 1040 760" role="img" aria-label="Interactive map of the AI companies and the money moving between them"></svg>
+      <div class="hcap" id="hcap" aria-live="polite"></div>
+    </div>
+  </div>
+  <p class="scrollcue">Pull on a thread: tap any logo</p>
+</header>
+
+<main class="story" id="story">
+  <div class="steps" id="steps"></div>
+  <div class="stage">
+    <div class="actlabel" id="act"></div>
+    <div class="legend" id="legend"></div>
+    <div class="scenes">
+      <svg id="map" class="scene" viewBox="0 0 1000 720" role="img" aria-label="Network map of deals between AI companies"></svg>
+      <svg id="ratio" class="scene" viewBox="0 0 1000 720" role="img" aria-label="Squares comparing money invested with spending promised back"></svg>
+      <svg id="matrix" class="scene" viewBox="0 0 1000 720" role="img" aria-label="Which companies are tied to OpenAI, Anthropic or both"></svg>
+      <svg id="scale" class="scene" viewBox="0 0 1000 720" role="img" aria-label="Squares comparing what OpenAI has promised with what customers pay each year"></svg>
+      <svg id="expo" class="scene" viewBox="0 0 1000 720" role="img" aria-label="Circles comparing OpenAI's promises with each company's value"></svg>
+    </div>
+    <p class="hint" id="hint"></p>
+  </div>
+</main>
+
+<footer class="foot">
+  <details>
+    <summary>Sources and caveats</summary>
+    <p>Figures come from press reports and company filings between 2025 and mid-2026 and some conflict. Contract values are promises, not cash, and are not meant to be added together beyond the sums shown. Market values are approximate. Each arrow carries a status: <b>announced</b>, <b>reported</b> or <b>disputed</b>. Company logos are trademarks of their owners, used here to identify them. This is an explainer, not investment advice.</p>
+    <ul id="sources"></ul>
+  </details>
+  <p class="credit">By Blake Feiza · Feiza Data</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
